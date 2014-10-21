@@ -59,9 +59,9 @@ Parameter("km22", 0.064)     # diss. of pShc-Grb2 and Sos in cytosol, units: /s
 Monomer('EGF', ['r'])
 # l: ligand binding; r: receptor dimerization; Y*: tyrosines
 Monomer('EGFR', ['l','r','Y1068','Y1148'],
-        {'Y1068': ['_','p'], 'Y1148': ['_','p']})
+        {'Y1068': ['u','p'], 'Y1148': ['u','p']})
 # PTB: phosphotyrosine (EGFR) binding; Y*: tyrosines
-Monomer('Shc', ['PTB','Y317'], {'Y317': ['_','p']})
+Monomer('Shc', ['PTB','Y317'], {'Y317': ['u','p']})
 # SH2,SH3: binding domains
 Monomer('Grb2', ['SH2','SH3'])
 # pr: proline-rich (SH3 recognition motif)
@@ -77,18 +77,18 @@ Rule("R_R_dimerize",
      EGFR(l=ANY,r=3) % EGFR(l=ANY,r=3), kp2, km2)
 
 # Transphosphorylation of EGFR by RTK
-Rule("R_Y1068_transphos", EGFR(r=ANY,Y1068='_') >> EGFR(r=ANY,Y1068='p'), kp3)
-Rule("R_Y1148_transphos", EGFR(r=ANY,Y1148='_') >> EGFR(r=ANY,Y1148='p'), kp3)
+Rule("R_Y1068_transphos", EGFR(r=ANY,Y1068='u') >> EGFR(r=ANY,Y1068='p'), kp3)
+Rule("R_Y1148_transphos", EGFR(r=ANY,Y1148='u') >> EGFR(r=ANY,Y1148='p'), kp3)
 
 # Dephosphorylayion
-Rule("R_Y1068_dephos", EGFR(Y1068='p') >> EGFR(Y1068='_'), km3)
-Rule("R_Y1148_dephos", EGFR(Y1148='p') >> EGFR(Y1148='_'), km3)
+Rule("R_Y1068_dephos", EGFR(Y1068='p') >> EGFR(Y1068='u'), km3)
+Rule("R_Y1148_dephos", EGFR(Y1148='p') >> EGFR(Y1148='u'), km3)
 
 # Shc transphosph
 Rule("Shc_transphos",
-     EGFR(r=ANY,Y1148=('p',1)) % Shc(PTB=1,Y317='_') >>
+     EGFR(r=ANY,Y1148=('p',1)) % Shc(PTB=1,Y317='u') >>
      EGFR(r=ANY,Y1148=('p',1)) % Shc(PTB=1,Y317='p'), kp14)
-Rule("Shc_bound_dephos", Shc(PTB=ANY,Y317='p') >> Shc(PTB=ANY,Y317='_'), km14)
+Rule("Shc_bound_dephos", Shc(PTB=ANY,Y317='p') >> Shc(PTB=ANY,Y317='u'), km14)
 
 # Y1068 activity
 Rule("R_Y1068_bind_Grb2",
@@ -103,8 +103,8 @@ Rule("R_Y1068_Grb2_bind_Sos",
 
 # Y1148 activity
 Rule("R_1148_bind_Shc",
-     EGFR(Y1148='p') + Shc(PTB=None,Y317='_') <>
-     EGFR(Y1148=('p',1)) % Shc(PTB=1,Y317='_'), kp13, km13)
+     EGFR(Y1148='p') + Shc(PTB=None,Y317='u') <>
+     EGFR(Y1148=('p',1)) % Shc(PTB=1,Y317='u'), kp13, km13)
 Rule("R_1148_bind_pShc",
      EGFR(Y1148='p') + Shc(PTB=None,Y317='p') <>
      EGFR(Y1148=('p',1)) % Shc(PTB=1,Y317='p'), kp15, km15)
@@ -133,7 +133,7 @@ Rule("pShc_bind_Grb2",
 Rule("pShc_bind_Grb2_Sos",
      Shc(PTB=None,Y317='p') + Grb2(SH2=None,SH3=1) % Sos(pr=1) <>
      Shc(PTB=None,Y317=('p',2)) % Grb2(SH2=2,SH3=1) % Sos(pr=1), kp23, km23)
-Rule("Shc_free_dephos", Shc(PTB=None,Y317='p') >> Shc(PTB=None,Y317='_'), km16)
+Rule("Shc_free_dephos", Shc(PTB=None,Y317='p') >> Shc(PTB=None,Y317='u'), km16)
 Rule("Grb2_bind_Sos",
      Grb2(SH2=None,SH3=None) + Sos(pr=None) <>
      Grb2(SH2=None,SH3=1) % Sos(pr=1), kp12, km12)
@@ -144,9 +144,9 @@ Rule("pShc_Grb2_bind_Sos",
 
 Initial(EGF(r=None), EGF_tot)
 Initial(Grb2(SH2=None, SH3=None), Grb2_tot)
-Initial(Shc(PTB=None, Y317='_'), Shc_tot)
+Initial(Shc(PTB=None, Y317='u'), Shc_tot)
 Initial(Sos(pr=None), Sos_tot)
-Initial(EGFR(l=None, r=None, Y1068='_', Y1148='_'), EGFR_tot)
+Initial(EGFR(l=None, r=None, Y1068='u', Y1148='u'), EGFR_tot)
 Initial(Grb2(SH2=None,SH3=1) % Sos(pr=1), Grb2_Sos_tot)
 
 
