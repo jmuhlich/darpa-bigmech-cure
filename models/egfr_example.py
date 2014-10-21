@@ -9,8 +9,8 @@ from pysb import *
 Model()
 
 
-Parameter('egf_tot', 1.2e6)        # molecule counts
-Parameter('egfr_tot', 1.8e5)       # molecule counts
+Parameter('EGF_tot', 1.2e6)        # molecule counts
+Parameter('EGFR_tot', 1.8e5)       # molecule counts
 Parameter('Grb2_tot', 1.0e5)       # molecule counts
 Parameter('Shc_tot', 2.7e5)        # molecule counts
 Parameter('Sos_tot', 1.3e4)        # molecule counts
@@ -55,115 +55,117 @@ Parameter("kp22", 1.667e-05) # binding of pShc-Grb2 to Sos in cytosol (scaled), 
 Parameter("km22", 0.064)     # diss. of pShc-Grb2 and Sos in cytosol, units: /s
 
 
-Monomer('egf', ['r'])
-Monomer('egfr', ['l','r','Y1068','Y1148'],
-        {'Y1068': ['Y','pY'], 'Y1148': ['Y','pY']})
-Monomer('Shc', ['PTB','Y317'], {'Y317': ['Y','pY']})
+# r: receptor binding
+Monomer('EGF', ['r'])
+# l: ligand binding; r: receptor dimerization; Y*: tyrosines
+Monomer('EGFR', ['l','r','Y1068','Y1148'],
+        {'Y1068': ['_','p'], 'Y1148': ['_','p']})
+# PTB: phosphotyrosine (EGFR) binding; Y*: tyrosines
+Monomer('Shc', ['PTB','Y317'], {'Y317': ['_','p']})
+# SH2,SH3: binding domains
 Monomer('Grb2', ['SH2','SH3'])
-Monomer('Sos', ['dom'])
+# pr: proline-rich (SH3 recognition motif)
+Monomer('Sos', ['pr'])
 
 
 # Ligand-receptor binding (ligand-monomer)
-Rule("L_bind_R", egfr(l=None,r=None) + egf(r=None) <> egfr(l=1,r=None) % egf(r=1), kp1, km1)
+Rule("L_bind_R", EGFR(l=None,r=None) + EGF(r=None) <> EGFR(l=1,r=None) % EGF(r=1), kp1, km1)
 
 # Receptor-aggregation 
 Rule("R_R_dimerize",
-     egfr(l=ANY,r=None) + egfr(l=ANY,r=None) <>
-     egfr(l=ANY,r=3) % egfr(l=ANY,r=3), kp2, km2)
+     EGFR(l=ANY,r=None) + EGFR(l=ANY,r=None) <>
+     EGFR(l=ANY,r=3) % EGFR(l=ANY,r=3), kp2, km2)
 
-# Transphosphorylation of egfr by RTK
-Rule("R_Y1068_transphos", egfr(r=ANY,Y1068="Y") >> egfr(r=ANY,Y1068="pY"), kp3)
-Rule("R_Y1148_transphos", egfr(r=ANY,Y1148="Y") >> egfr(r=ANY,Y1148="pY"), kp3)
+# Transphosphorylation of EGFR by RTK
+Rule("R_Y1068_transphos", EGFR(r=ANY,Y1068='_') >> EGFR(r=ANY,Y1068='p'), kp3)
+Rule("R_Y1148_transphos", EGFR(r=ANY,Y1148='_') >> EGFR(r=ANY,Y1148='p'), kp3)
 
 # Dephosphorylayion
-Rule("R_Y1068_dephos", egfr(Y1068="pY") >> egfr(Y1068="Y"), km3)
-Rule("R_Y1148_dephos", egfr(Y1148="pY") >> egfr(Y1148="Y"), km3)
+Rule("R_Y1068_dephos", EGFR(Y1068='p') >> EGFR(Y1068='_'), km3)
+Rule("R_Y1148_dephos", EGFR(Y1148='p') >> EGFR(Y1148='_'), km3)
 
 # Shc transphosph
 Rule("Shc_transphos",
-     egfr(r=ANY,Y1148=("pY",1)) % Shc(PTB=1,Y317="Y") >>
-     egfr(r=ANY,Y1148=("pY",1)) % Shc(PTB=1,Y317="pY"), kp14)
-Rule("Shc_bound_dephos", Shc(PTB=ANY,Y317="pY") >> Shc(PTB=ANY,Y317="Y"), km14)
+     EGFR(r=ANY,Y1148=('p',1)) % Shc(PTB=1,Y317='_') >>
+     EGFR(r=ANY,Y1148=('p',1)) % Shc(PTB=1,Y317='p'), kp14)
+Rule("Shc_bound_dephos", Shc(PTB=ANY,Y317='p') >> Shc(PTB=ANY,Y317='_'), km14)
 
 # Y1068 activity
 Rule("R_Y1068_bind_Grb2",
-     egfr(Y1068="pY") + Grb2(SH2=None,SH3=None) <>
-     egfr(Y1068=("pY",1)) % Grb2(SH2=1,SH3=None), kp9, km9)
-# FIXME why not explicitly mention Sos rather than use ANY?
+     EGFR(Y1068='p') + Grb2(SH2=None,SH3=None) <>
+     EGFR(Y1068=('p',1)) % Grb2(SH2=1,SH3=None), kp9, km9)
 Rule("R_Y1068_bind_Grb2_Sos",
-     egfr(Y1068="pY") + Grb2(SH2=None,SH3=ANY) <>
-     egfr(Y1068=("pY",1)) % Grb2(SH2=1,SH3=ANY), kp11, km11)
+     EGFR(Y1068='p') + Grb2(SH2=None,SH3=2) % Sos(pr=2) <>
+     EGFR(Y1068=('p',1)) % Grb2(SH2=1,SH3=2) % Sos(pr=2), kp11, km11)
 Rule("R_Y1068_Grb2_bind_Sos",
-     egfr(Y1068=("pY",1)) % Grb2(SH2=1,SH3=None) + Sos(dom=None) <>
-     egfr(Y1068=("pY",1)) % Grb2(SH2=1,SH3=2) % Sos(dom=2), kp10, km10)
+     EGFR(Y1068=('p',1)) % Grb2(SH2=1,SH3=None) + Sos(pr=None) <>
+     EGFR(Y1068=('p',1)) % Grb2(SH2=1,SH3=2) % Sos(pr=2), kp10, km10)
 
 # Y1148 activity
 Rule("R_1148_bind_Shc",
-     egfr(Y1148="pY") + Shc(PTB=None,Y317="Y") <>
-     egfr(Y1148=("pY",1)) % Shc(PTB=1,Y317="Y"), kp13, km13)
+     EGFR(Y1148='p') + Shc(PTB=None,Y317='_') <>
+     EGFR(Y1148=('p',1)) % Shc(PTB=1,Y317='_'), kp13, km13)
 Rule("R_1148_bind_pShc",
-     egfr(Y1148="pY") + Shc(PTB=None,Y317="pY") <>
-     egfr(Y1148=("pY",1)) % Shc(PTB=1,Y317="pY"), kp15, km15)
+     EGFR(Y1148='p') + Shc(PTB=None,Y317='p') <>
+     EGFR(Y1148=('p',1)) % Shc(PTB=1,Y317='p'), kp15, km15)
 Rule("R_1148_bind_pShc_Grb2",
-     egfr(Y1148="pY") + Shc(PTB=None,Y317=("pY",1)) % Grb2(SH2=1,SH3=None) <>
-     egfr(Y1148=("pY",2)) % Shc(PTB=2,Y317=("pY",1)) % Grb2(SH2=1,SH3=None), kp18, km18)
+     EGFR(Y1148='p') + Shc(PTB=None,Y317=('p',1)) % Grb2(SH2=1,SH3=None) <>
+     EGFR(Y1148=('p',2)) % Shc(PTB=2,Y317=('p',1)) % Grb2(SH2=1,SH3=None), kp18, km18)
 Rule("R_1148_bind_pShc_Grb2_Sos",
-     egfr(Y1148="pY") + Shc(PTB=None,Y317=("pY",1)) % Grb2(SH2=1,SH3=3) % Sos(dom=3) <>
-     egfr(Y1148=("pY",2)) % Shc(PTB=2,Y317=("pY",1)) % Grb2(SH2=1,SH3=3) % Sos(dom=3),
+     EGFR(Y1148='p') + Shc(PTB=None,Y317=('p',1)) % Grb2(SH2=1,SH3=3) % Sos(pr=3) <>
+     EGFR(Y1148=('p',2)) % Shc(PTB=2,Y317=('p',1)) % Grb2(SH2=1,SH3=3) % Sos(pr=3),
      kp20, km20)
 Rule("R_1148_pShc_bind_Grb2",
-     egfr(Y1148=("pY",1)) % Shc(PTB=1,Y317="pY") + Grb2(SH2=None,SH3=None) <>
-     egfr(Y1148=("pY",1)) % Shc(PTB=1,Y317=("pY",2)) % Grb2(SH2=2,SH3=None), kp17, km17)
+     EGFR(Y1148=('p',1)) % Shc(PTB=1,Y317='p') + Grb2(SH2=None,SH3=None) <>
+     EGFR(Y1148=('p',1)) % Shc(PTB=1,Y317=('p',2)) % Grb2(SH2=2,SH3=None), kp17, km17)
 Rule("R_1148_pShc_bind_Grb2_Sos",
-     egfr(Y1148=("pY",1)) % Shc(PTB=1,Y317="pY") + Grb2(SH2=None,SH3=3) % Sos(dom=3) <> 
-     egfr(Y1148=("pY",1)) % Shc(PTB=1,Y317=("pY",2)) % Grb2(SH2=2,SH3=3) % Sos(dom=3),
+     EGFR(Y1148=('p',1)) % Shc(PTB=1,Y317='p') + Grb2(SH2=None,SH3=3) % Sos(pr=3) <> 
+     EGFR(Y1148=('p',1)) % Shc(PTB=1,Y317=('p',2)) % Grb2(SH2=2,SH3=3) % Sos(pr=3),
      kp24, km24)
-# FIXME why not explicitly mention egfr-pY1148 rather than use ANY?
 Rule("R_1148_pShc_Grb2_bind_Sos",
-     Shc(PTB=ANY,Y317=("pY",2)) % Grb2(SH2=2,SH3=None) + Sos(dom=None) <>
-     Shc(PTB=ANY,Y317=("pY",2)) % Grb2(SH2=2,SH3=3) % Sos(dom=3), kp19, km19)
+     EGFR(Y1148=('p',1)) % Shc(PTB=1,Y317=('p',3)) % Grb2(SH2=3,SH3=None) + Sos(pr=None) <>
+     EGFR(Y1148=('p',1)) % Shc(PTB=1,Y317=('p',3)) % Grb2(SH2=3,SH3=4) % Sos(pr=4), kp19, km19)
 
 # Cytosolic 
 Rule("pShc_bind_Grb2",
-     Shc(PTB=None,Y317="pY") + Grb2(SH2=None,SH3=None) <>
-     Shc(PTB=None,Y317=("pY",1)) % Grb2(SH2=1,SH3=None), kp21, km21)
-# FIXME why not explicitly mention Sos rather than use ANY?
+     Shc(PTB=None,Y317='p') + Grb2(SH2=None,SH3=None) <>
+     Shc(PTB=None,Y317=('p',1)) % Grb2(SH2=1,SH3=None), kp21, km21)
 Rule("pShc_bind_Grb2_Sos",
-     Shc(PTB=None,Y317="pY") + Grb2(SH2=None,SH3=ANY) <>
-     Shc(PTB=None,Y317=("pY",1)) % Grb2(SH2=1,SH3=ANY), kp23, km23)
-Rule("Shc_free_dephos", Shc(PTB=None,Y317="pY") >> Shc(PTB=None,Y317="Y"), km16)
+     Shc(PTB=None,Y317='p') + Grb2(SH2=None,SH3=1) % Sos(pr=1) <>
+     Shc(PTB=None,Y317=('p',2)) % Grb2(SH2=2,SH3=1) % Sos(pr=1), kp23, km23)
+Rule("Shc_free_dephos", Shc(PTB=None,Y317='p') >> Shc(PTB=None,Y317='_'), km16)
 Rule("Grb2_bind_Sos",
-     Grb2(SH2=None,SH3=None) + Sos(dom=None) <>
-     Grb2(SH2=None,SH3=1) % Sos(dom=1), kp12, km12)
+     Grb2(SH2=None,SH3=None) + Sos(pr=None) <>
+     Grb2(SH2=None,SH3=1) % Sos(pr=1), kp12, km12)
 Rule("pShc_Grb2_bind_Sos",
-     Shc(PTB=None,Y317=("pY",2)) % Grb2(SH2=2,SH3=None) + Sos(dom=None) <> 
-     Shc(PTB=None,Y317=("pY",2)) % Grb2(SH2=2,SH3=3) % Sos(dom=3), kp22, km22)
+     Shc(PTB=None,Y317=('p',2)) % Grb2(SH2=2,SH3=None) + Sos(pr=None) <> 
+     Shc(PTB=None,Y317=('p',2)) % Grb2(SH2=2,SH3=3) % Sos(pr=3), kp22, km22)
 
 
-Initial(egf(r=None), egf_tot)
+Initial(EGF(r=None), EGF_tot)
 Initial(Grb2(SH2=None, SH3=None), Grb2_tot)
-Initial(Shc(PTB=None, Y317='Y'), Shc_tot)
-Initial(Sos(dom=None), Sos_tot)
-Initial(egfr(l=None, r=None, Y1068='Y', Y1148='Y'), egfr_tot)
-Initial(Grb2(SH2=None,SH3=1) % Sos(dom=1), Grb2_Sos_tot)
+Initial(Shc(PTB=None, Y317='_'), Shc_tot)
+Initial(Sos(pr=None), Sos_tot)
+Initial(EGFR(l=None, r=None, Y1068='_', Y1148='_'), EGFR_tot)
+Initial(Grb2(SH2=None,SH3=1) % Sos(pr=1), Grb2_Sos_tot)
 
 
 # Observables
 """
-    Molecules     Dimers       egfr(r!1).egfr(r!1)
-    Molecules     Sos_act      Shc(PTB!+,Y317~pY!2).Grb2(SH2!2,SH3!3).Sos(dom!3), egfr(Y1068~pY!1).Grb2(SH2!1,SH3!2).Sos(dom!2)
-    Molecules     RP           egfr(Y1068~pY!?), egfr(Y1148~pY!?)
+    Molecules     Dimers       EGFR(r!1).EGFR(r!1)
+    Molecules     Sos_act      Shc(PTB!+,Y317~pY!2).Grb2(SH2!2,SH3!3).Sos(pr!3), EGFR(Y1068~pY!1).Grb2(SH2!1,SH3!2).Sos(pr!2)
+    Molecules     RP           EGFR(Y1068~pY!?), EGFR(Y1148~pY!?)
     Molecules     Shc_Grb      Shc(Y317~pY!1).Grb2(SH2!1)
-    Molecules     Shc_Grb_Sos  Shc(Y317~pY!1).Grb2(SH2!1,SH3!2).Sos(dom!2)
-    Molecules     R_Grb2       egfr(Y1068~pY!1).Grb2(SH2!1)
-    Molecules     R_Shc        egfr(Y1148~pY!1).Shc(PTB!1,Y317~Y)
-    Molecules     R_ShcP       egfr(Y1148~pY!1).Shc(PTB!1,Y317~pY!?)
+    Molecules     Shc_Grb_Sos  Shc(Y317~pY!1).Grb2(SH2!1,SH3!2).Sos(pr!2)
+    Molecules     R_Grb2       EGFR(Y1068~pY!1).Grb2(SH2!1)
+    Molecules     R_Shc        EGFR(Y1148~pY!1).Shc(PTB!1,Y317~Y)
+    Molecules     R_ShcP       EGFR(Y1148~pY!1).Shc(PTB!1,Y317~pY!?)
     Molecules     ShcP         Shc(Y317~pY!?)
-    Molecules     R_G_S        egfr(Y1068~pY!1).Grb2(SH2!1,SH3!2).Sos(dom!2)
+    Molecules     R_G_S        EGFR(Y1068~pY!1).Grb2(SH2!1,SH3!2).Sos(pr!2)
     # Strong differences are seen for R_G_S in comparison with path model
-    Molecules     R_S_G_S      egfr(Y1148~pY!1).Shc(PTB!1,Y317~pY!2).Grb2(SH2!2,SH3!3).Sos(dom!3)
+    Molecules     R_S_G_S      EGFR(Y1148~pY!1).Shc(PTB!1,Y317~pY!2).Grb2(SH2!2,SH3!3).Sos(pr!3)
 
-    Molecules     Efgr_total  egfr
+    Molecules     Efgr_total  EGFR
     Molecules     Shc_total   Shc
     Molecules     Sos_total   Sos
     Molecules     Grb2_total  Grb2

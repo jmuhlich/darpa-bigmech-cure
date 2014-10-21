@@ -18,5 +18,5 @@ for r in L_bind_R, R_R_dimerize, R_Y1068_transphos, R_Y1148_transphos:
 model.rules -= rules
 model.parameters -= params
 
-Initial(egfr(l=None, r=1, Y1068='pY', Y1148='pY') % egfr(l=None, r=1, Y1068='Y', Y1148='Y'),
-        egfr_tot)
+Initial(EGFR(l=None, r=1, Y1068='p', Y1148='p') % EGFR(l=None, r=1, Y1068='_', Y1148='_'),
+        EGFR_tot)
