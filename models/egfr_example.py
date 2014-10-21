@@ -150,26 +150,25 @@ Initial(EGFR(l=None, r=None, Y1068='u', Y1148='u'), EGFR_tot)
 Initial(Grb2(SH2=None,SH3=1) % Sos(pr=1), Grb2_Sos_tot)
 
 
-# Observables
-"""
-    Molecules     Dimers       EGFR(r!1).EGFR(r!1)
-    Molecules     Sos_act      Shc(PTB!+,Y317~pY!2).Grb2(SH2!2,SH3!3).Sos(pr!3), EGFR(Y1068~pY!1).Grb2(SH2!1,SH3!2).Sos(pr!2)
-    Molecules     RP           EGFR(Y1068~pY!?), EGFR(Y1148~pY!?)
-    Molecules     Shc_Grb      Shc(Y317~pY!1).Grb2(SH2!1)
-    Molecules     Shc_Grb_Sos  Shc(Y317~pY!1).Grb2(SH2!1,SH3!2).Sos(pr!2)
-    Molecules     R_Grb2       EGFR(Y1068~pY!1).Grb2(SH2!1)
-    Molecules     R_Shc        EGFR(Y1148~pY!1).Shc(PTB!1,Y317~Y)
-    Molecules     R_ShcP       EGFR(Y1148~pY!1).Shc(PTB!1,Y317~pY!?)
-    Molecules     ShcP         Shc(Y317~pY!?)
-    Molecules     R_G_S        EGFR(Y1068~pY!1).Grb2(SH2!1,SH3!2).Sos(pr!2)
-    # Strong differences are seen for R_G_S in comparison with path model
-    Molecules     R_S_G_S      EGFR(Y1148~pY!1).Shc(PTB!1,Y317~pY!2).Grb2(SH2!2,SH3!3).Sos(pr!3)
-
-    Molecules     Efgr_total  EGFR
-    Molecules     Shc_total   Shc
-    Molecules     Sos_total   Sos
-    Molecules     Grb2_total  Grb2
-"""
+Observable("Dimers", EGFR(r=1) % EGFR(r=1))
+Observable("Sos_act",
+           Shc(PTB=ANY,Y317=('p',2)) % Grb2(SH2=2,SH3=3) % Sos(pr=3) +
+           EGFR(Y1068=('p',1)) % Grb2(SH2=1,SH3=2) % Sos(pr=2))
+Observable("RP", EGFR(Y1068=('p',WILD)) + EGFR(Y1148=('p',WILD)))
+Observable("Shc_Grb", Shc(Y317=('p',1)) % Grb2(SH2=1))
+Observable("Shc_Grb_Sos", Shc(Y317=('p',1)) % Grb2(SH2=1,SH3=2) % Sos(pr=2))
+Observable("R_Grb2", EGFR(Y1068=('p',1)) % Grb2(SH2=1))
+Observable("R_Shc", EGFR(Y1148=('p',1)) % Shc(PTB=1,Y317='u'))
+Observable("R_ShcP", EGFR(Y1148=('p',1)) % Shc(PTB=1,Y317=('p',WILD)))
+Observable("ShcP", Shc(Y317=('p',WILD)))
+Observable("R_G_S", EGFR(Y1068=('p',1)) % Grb2(SH2=1,SH3=2) % Sos(pr=2))
+Observable("R_S_G_S",
+           EGFR(Y1148=('p',1)) % Shc(PTB=1,Y317=('p',2)) % Grb2(SH2=2,SH3=3) %
+           Sos(pr=3))
+Observable("Efgr_total", EGFR)
+Observable("Shc_total", Shc)
+Observable("Sos_total", Sos)
+Observable("Grb2_total", Grb2)
 
 
 if __name__ == '__main__':
