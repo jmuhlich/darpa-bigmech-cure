@@ -9,13 +9,13 @@ from pysb import *
 Model()
 
 
+# Parameters from egfr_net.bngl
 Parameter('EGF_tot', 1.2e6)        # molecule counts
 Parameter('EGFR_tot', 1.8e5)       # molecule counts
 Parameter('Grb2_tot', 1.0e5)       # molecule counts
 Parameter('Shc_tot', 2.7e5)        # molecule counts
 Parameter('Sos_tot', 1.3e4)        # molecule counts
 Parameter('Grb2_Sos_tot', 4.9e4)   # molecule counts
-
 Parameter("kp1", 1.667e-06)  # ligand-monomer binding (scaled), units: /molecule/s
 Parameter("km1", 0.06)       # ligand-monomer dissociation, units: /s
 Parameter("kp2", 5.556e-06)  # aggregation of bound monomers (scaled), units: /molecule/s
@@ -54,6 +54,16 @@ Parameter("km12", 0.0015)    # diss. of Grb2 and Sos in cytosol, units: /s
 Parameter("kp22", 1.667e-05) # binding of pShc-Grb2 to Sos in cytosol (scaled), units: /molecule/s
 Parameter("km22", 0.064)     # diss. of pShc-Grb2 and Sos in cytosol, units: /s
 
+Parameter('Ras_0', 6e4)       # molecule counts
+Parameter('Raf_0', 7e4)       # molecule counts
+Parameter('MEK_0', 3e6)       # molecule counts
+Parameter('ERK_0', 7e5)       # molecule counts
+Parameter('PP2A_0', 2e5)      # molecule counts
+Parameter('MKP_0', 1.7e4)     # molecule counts
+Parameter("kf_sos_ras", 1e-7) # guess
+Parameter("kr_sos_ras", 1e-1) # guess
+Parameter("kc_sos_ras", 1e-1) # guess
+Parameter("kf_ras_hyd", 1e1)  # guess
 # Generic rates for MAPK cascade kinase/phosphatase binding, unbinding and catalysis.
 Parameter('kf_bind', 1e-5)
 Parameter('kr_bind', 1e-1)
@@ -77,12 +87,16 @@ Monomer('EGFR', ['l','r','Y1068','Y1148'], {'Y1068': ['u','p'], 'Y1148': ['u','p
 Monomer('Shc', ['PTB','Y317'], {'Y317': ['u','p']})
 # SH2,SH3: binding domains
 Monomer('Grb2', ['SH2','SH3'])
-# pr: proline-rich (SH3 recognition motif)
-Monomer('Sos', ['pr'])
-Monomer('Ras', ['k'])
+# pr: proline-rich (SH3 recognition motif); RasGEF: binds Ras and promotes
+# conversion of GDP to GTP
+Monomer('Sos', ['pr','RasGEF'])
+# S1S2: Switch1-Switch2 region, the interface with Sos and binding site for
+# GDP/GTP (in reality the contacts with Sos and the nucleotide are rather
+# distributed across the protein)
+Monomer('Ras', ['S1S2', 'k'], {'S1S2': ['GDP','GTP']})
 # X: unspecified residue whose phosphorylation we will treat as the regulator of
-#    Raf's kinase activity (Ras activation of Raf is actually quite complicated
-#    and not perfectly understood)
+# Raf's kinase activity (Ras activation of Raf is actually quite complicated and
+# not perfectly understood)
 Monomer('Raf', ['X','k'], {'X': ['u','p']})
 Monomer('MEK', ['S218','S222','k'], {'S218': ['u','p'], 'S222': ['u','p']})
 Monomer('ERK', ['T185','Y187'], {'T185': ['u','p'], 'Y187': ['u','p']})
@@ -90,28 +104,36 @@ Monomer('PP2A', ['ppt'])
 Monomer('MKP', ['ppt'])
 
 
+# REF: http://dx.doi.org/10.1093/emboj/16.2.281
+# REF: http://dx.doi.org/10.1021/bi9602268
 # Ligand-receptor binding (ligand-monomer)
 Rule("L_bind_R", EGFR(l=None,r=None) + EGF(r=None) <> EGFR(l=1,r=None) % EGF(r=1), kp1, km1)
 
+# REF: http://dx.doi.org/10.1074/jbc.274.42.30169
 # Receptor-aggregation 
 Rule("R_R_dimerize",
      EGFR(l=ANY,r=None) + EGFR(l=ANY,r=None) <>
      EGFR(l=ANY,r=3) % EGFR(l=ANY,r=3), kp2, km2)
 
+# REF: http://www.jbc.org/content/267/29/20638.short
+# REF: http://dx.doi.org/10.1074/jbc.271.10.5386
+# REF: http://dx.doi.org/10.1128/MCB.22.7.2375-2387.2002
+# REF: http://www.pnas.org/content/93/19/10078
 # Transphosphorylation of EGFR by RTK
 Rule("R_Y1068_transphos", EGFR(r=ANY,Y1068='u') >> EGFR(r=ANY,Y1068='p'), kp3)
 Rule("R_Y1148_transphos", EGFR(r=ANY,Y1148='u') >> EGFR(r=ANY,Y1148='p'), kp3)
-
 # Dephosphorylayion
 Rule("R_Y1068_dephos", EGFR(Y1068='p') >> EGFR(Y1068='u'), km3)
 Rule("R_Y1148_dephos", EGFR(Y1148='p') >> EGFR(Y1148='u'), km3)
 
+# REF: http://dx.doi.org/10.1074/jbc.271.30.18224
 # Shc transphosph
 Rule("Shc_transphos",
      EGFR(r=ANY,Y1148=('p',1)) % Shc(PTB=1,Y317='u') >>
      EGFR(r=ANY,Y1148=('p',1)) % Shc(PTB=1,Y317='p'), kp14)
 Rule("Shc_bound_dephos", Shc(PTB=ANY,Y317='p') >> Shc(PTB=ANY,Y317='u'), km14)
 
+# REF: http://dx.doi.org/10.1074/jbc.271.30.18224
 # Y1068 activity
 Rule("R_Y1068_bind_Grb2",
      EGFR(Y1068='p') + Grb2(SH2=None,SH3=None) <>
@@ -123,6 +145,7 @@ Rule("R_Y1068_Grb2_bind_Sos",
      EGFR(Y1068=('p',1)) % Grb2(SH2=1,SH3=None) + Sos(pr=None) <>
      EGFR(Y1068=('p',1)) % Grb2(SH2=1,SH3=2) % Sos(pr=2), kp10, km10)
 
+# REF: http://dx.doi.org/10.1074/jbc.271.30.18224
 # Y1148 activity
 Rule("R_1148_bind_Shc",
      EGFR(Y1148='p') + Shc(PTB=None,Y317='u') <>
@@ -148,6 +171,8 @@ Rule("R_1148_pShc_Grb2_bind_Sos",
      EGFR(Y1148=('p',1)) % Shc(PTB=1,Y317=('p',3)) % Grb2(SH2=3,SH3=None) + Sos(pr=None) <>
      EGFR(Y1148=('p',1)) % Shc(PTB=1,Y317=('p',3)) % Grb2(SH2=3,SH3=4) % Sos(pr=4), kp19, km19)
 
+# REF: http://dx.doi.org/10.1074/jbc.271.30.18224
+# REF: http://mcb.asm.org/content/18/2/880.long
 # Cytosolic 
 Rule("pShc_bind_Grb2",
      Shc(PTB=None,Y317='p') + Grb2(SH2=None,SH3=None) <>
@@ -163,19 +188,33 @@ Rule("pShc_Grb2_bind_Sos",
      Shc(PTB=None,Y317=('p',2)) % Grb2(SH2=2,SH3=None) + Sos(pr=None) <> 
      Shc(PTB=None,Y317=('p',2)) % Grb2(SH2=2,SH3=3) % Sos(pr=3), kp22, km22)
 
-# FIXME add Sos activation of Ras
+# Ras GDP-GTP conversion
+# REF: http://mcb.asm.org/content/18/2/880.long
+# REF: http://dx.doi.org/10.1038/28548
+Rule("R_Sos_bind_RasGDP",
+     EGFR() % Sos(RasGEF=None) + Ras(S1S2='GDP') <>
+     EGFR() % Sos(RasGEF=1) % Ras(S1S2=('GDP',1)), kf_sos_ras, kr_sos_ras)
+Rule("R_Sos_catalyze_RasGTP",
+     Sos(RasGEF=1) % Ras(S1S2=('GDP',1)) >>
+     Sos(RasGEF=None) + Ras(S1S2='GTP'), kc_sos_ras)
+Rule("RasGTP_hydrolysis", Ras(S1S2='GTP') >> Ras(S1S2='GDP'), kf_ras_hyd)
 
 ## MAPK section generated by expand_mapk_rules.py .
 # (Typically one would just put those macro calls here, but I decided to expand
 # the full rule set instead. If people would rather have the macros here we can
 # easily change that. -JLM)
 
+# REF: http://dx.doi.org/10.1016/S0955-0674(97)80060-9
+# REF: http://dx.doi.org/10.1021/bi980764f
+# REF: http://dx.doi.org/10.1016/0092-8674(93)90307-C
 # Raf activation
-Rule('bind_Ras_Rafu_to_RasRaf', Ras(k=None) + Raf(X='u') <> Ras(k=1) % Raf(X=('u', 1)), kf_bind, kr_bind)
-Rule('catalyze_RasRaf_to_Ras_Rafp', Ras(k=1) % Raf(X=('u', 1)) >> Ras(k=None) + Raf(X='p'), kcat_phos)
+Rule('bind_RasGTP_Rafu_to_RasGTPRaf', Ras(S1S2='GTP', k=None) + Raf(X='u') <> Ras(S1S2='GTP', k=1) % Raf(X=('u', 1)), kf_bind, kr_bind)
+Rule('catalyze_RasGTPRaf_to_RasGTP_Rafp', Ras(S1S2='GTP', k=1) % Raf(X=('u', 1)) >> Ras(S1S2='GTP', k=None) + Raf(X='p'), kcat_phos)
 Rule('bind_PP2A_Rafp_to_PP2ARaf', PP2A(ppt=None) + Raf(X='p', k=None) <> PP2A(ppt=1) % Raf(X=('p', 1), k=None), kf_bind, kr_bind)
 Rule('catalyze_PP2ARaf_to_PP2A_Rafu', PP2A(ppt=1) % Raf(X=('p', 1), k=None) >> PP2A(ppt=None) + Raf(X='u', k=None), kcat_dephos)
 
+# REF: http://www.ncbi.nlm.nih.gov/pmc/articles/PMC394921/
+# REF: http://www.jbc.org/content/269/29/19067.short
 # MEK activation
 Rule('bind_Rafp_MEKuu_to_RafpMEKu', Raf(X='p', k=None) + MEK(S218='u', S222='u') <> Raf(X='p', k=1) % MEK(S218=('u', 1), S222='u'), kf_bind, kr_bind)
 Rule('catalyze_RafpMEKu_to_Rafp_MEKpu', Raf(X='p', k=1) % MEK(S218=('u', 1), S222='u') >> Raf(X='p', k=None) + MEK(S218='p', S222='u'), kcat_phos)
@@ -187,6 +226,7 @@ Rule('bind_PP2A_MEKpp_to_PP2AMEKp', PP2A(ppt=None) + MEK(S218='p', S222='p', k=N
 Rule('catalyze_PP2AMEKp_to_PP2A_MEKpu', PP2A(ppt=1) % MEK(S218='p', S222=('p', 1), k=None) >> PP2A(ppt=None) + MEK(S218='p', S222='u', k=None), kcat_dephos)
 
 # ERK activation
+# REF: http://dx.doi.org/10.1016/j.phrs.2012.04.005
 Rule('bind_MEKpp_ERKuu_to_MEKppERKu', MEK(S218='p', S222='p', k=None) + ERK(T185='u', Y187='u') <> MEK(S218='p', S222='p', k=1) % ERK(T185=('u', 1), Y187='u'), kf_bind, kr_bind)
 Rule('catalyze_MEKppERKu_to_MEKpp_ERKup', MEK(S218='p', S222='p', k=1) % ERK(T185=('u', 1), Y187='u') >> MEK(S218='p', S222='p', k=None) + ERK(T185='p', Y187='u'), kcat_phos)
 Rule('bind_MKP_ERKup_to_MKPERKu', MKP(ppt=None) + ERK(T185='p', Y187='u') <> MKP(ppt=1) % ERK(T185=('p', 1), Y187='u'), kf_bind, kr_bind)
@@ -200,16 +240,15 @@ Rule('catalyze_MKPERKp_to_MKP_ERKup', MKP(ppt=1) % ERK(T185='p', Y187=('p', 1)) 
 Initial(EGF(r=None), EGF_tot)
 Initial(Grb2(SH2=None, SH3=None), Grb2_tot)
 Initial(Shc(PTB=None, Y317='u'), Shc_tot)
-Initial(Sos(pr=None), Sos_tot)
+Initial(Sos(pr=None, RasGEF=None), Sos_tot)
 Initial(EGFR(l=None, r=None, Y1068='u', Y1148='u'), EGFR_tot)
-Initial(Grb2(SH2=None,SH3=1) % Sos(pr=1), Grb2_Sos_tot)
-# FIXME move these parameters to separate lines above
-Initial(Ras(k=None), Parameter('Ras_0', 6e4))
-Initial(Raf(X='u', k=None), Parameter('Raf_0', 7e4))
-Initial(MEK(S218='u', S222='u', k=None), Parameter('MEK_0', 3e6))
-Initial(ERK(T185='u', Y187='u'), Parameter('ERK_0', 7e5))
-Initial(PP2A(ppt=None), Parameter('PP2A_0', 2e5))
-Initial(MKP(ppt=None), Parameter('MKP_0', 1.7e4))
+Initial(Grb2(SH2=None, SH3=1) % Sos(pr=1, RasGEF=None), Grb2_Sos_tot)
+Initial(Ras(S1S2='GDP', k=None), Ras_0)
+Initial(Raf(X='u', k=None), Raf_0)
+Initial(MEK(S218='u', S222='u', k=None), MEK_0)
+Initial(ERK(T185='u', Y187='u'), ERK_0)
+Initial(PP2A(ppt=None), PP2A_0)
+Initial(MKP(ppt=None), MKP_0)
 
 
 Observable("Dimers", EGFR(r=1) % EGFR(r=1))

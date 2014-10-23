@@ -37,7 +37,7 @@ def mapk_double(kinase, pptase, substrate, site1, site2):
 # already in the model.
 pysb.core.SelfExporter.do_export = False
 mapk_rules = pysb.core.ComponentSet()
-mapk_rules |= mapk_single(Ras, PP2A, Raf, 'X')
+mapk_rules |= mapk_single(Ras(S1S2='GTP'), PP2A, Raf, 'X')
 mapk_rules |= mapk_double(Raf(X='p'), PP2A, MEK, 'S218', 'S222')
 mapk_rules |= mapk_double(MEK(S218='p', S222='p'), MKP, ERK, 'T185', 'Y187')
 
